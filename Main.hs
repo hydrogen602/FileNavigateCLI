@@ -4,14 +4,14 @@ import System.Directory
 import System.IO (stdin, hSetEcho, hSetBuffering, BufferMode( NoBuffering ), hReady, stdout)
 import Control.Monad (when, mapM_)
 import System.Console.ANSI
-import Data.List (partition)
+import Data.List (partition, sort)
 import System.Console.Terminal.Size
 import GHC.Real (Integral)
 import Data.List.Split (chunksOf)
 
 data ScrollDir = UP | DOWN
 
-data Location = File String | Directory String 
+data Location = File String | Directory String deriving (Show, Ord, Eq)
 
 getFileName :: Location -> String
 getFileName (File s) = s
@@ -65,10 +65,11 @@ getDirContents cwd =
       return $ if isDir then Directory name else File name
       where newPath = cwd ++ '/':name
     
+    sortBoth (a, b) = (sort a, sort b)
   in do
     files <- fmap ("..":) (listDirectory cwd)
     names <- mapM determine files 
-    let dirsAndFiles = partition isDirectory names
+    let dirsAndFiles = sortBoth (partition isDirectory names)
     return (uncurry (++) dirsAndFiles)
 
 
