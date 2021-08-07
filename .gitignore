@@ -1,0 +1,7 @@
+
+# Compiled files
+*.hi
+*.o
+
+# Executables
+Main
