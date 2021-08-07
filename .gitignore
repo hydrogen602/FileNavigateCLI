@@ -1,7 +1,9 @@
-
 # Compiled files
 *.hi
 *.o
 
 # Executables
 Main
+
+# VS Code
+.vscode
