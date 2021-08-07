@@ -8,8 +8,10 @@ import Data.List (partition, sort)
 import System.Console.Terminal.Size
 import GHC.Real (Integral)
 import Data.List.Split (chunksOf)
+import Data.Char (toLower)
 
-data ScrollDir = UP | DOWN
+up = -1
+down = 1
 
 data Location = File String | Directory String deriving (Show, Ord, Eq)
 
@@ -81,16 +83,23 @@ getWindowSize = do
           Nothing -> error "Couldn't determine screen size")
 
 
-scrollHandler :: Int -> Int -> (Int, Int) -> ScrollDir -> (Int, Int)
+scrollHandler :: Int -> Int -> (Int, Int) -> Int -> (Int, Int)
 scrollHandler lineCount fileCount (selected, startIndex) dir
   | newSelected < startIndex = (newSelected, newSelected)
   | newSelected > startIndex + lineCount = (newSelected, newSelected - lineCount)
   | otherwise = (newSelected, startIndex)
   where 
-    newSelected = mod (case dir of
-        UP -> selected - 1
-        DOWN -> selected + 1
-        ) fileCount
+    newSelected = mod (selected + dir) fileCount
+
+
+searchFirst :: Char -> [Location] -> Maybe Int
+searchFirst _ [] = Nothing
+searchFirst c (e:ls)
+  | toLower (head name) == c = Just 0
+  | otherwise = case searchFirst c ls of
+      Nothing -> Nothing
+      Just n -> Just $ n + 1
+  where name = getFileName e
 
 
 loop :: Int -> Int -> IO ()
@@ -112,10 +121,10 @@ loop selected startIndex = do
     key <- getKey
     when (key /= "\ESC") $ do
     case key of
-      "\ESC[A" -> uncurry loop (thisScrollHandler UP) -- up
-      "\ESC[B" -> uncurry loop (thisScrollHandler DOWN) -- down
-      "\ESC[C" -> uncurry loop (thisScrollHandler DOWN) -- right
-      "\ESC[D" -> uncurry loop (thisScrollHandler UP) -- left
+      "\ESC[A" -> uncurry loop (thisScrollHandler up) -- up
+      "\ESC[B" -> uncurry loop (thisScrollHandler down) -- down
+      "\ESC[C" -> uncurry loop (thisScrollHandler down) -- right
+      "\ESC[D" -> uncurry loop (thisScrollHandler up) -- left
       "\n"     -> 
         let newPath = cwd ++ "/" ++ getFileName (files !! selected)
         in do
@@ -126,7 +135,9 @@ loop selected startIndex = do
           else
             loop selected startIndex
       -- "\DEL"   -> putStr ""
-      _ -> loop selected startIndex
+      c -> case searchFirst (head c) files of
+        Nothing -> loop selected startIndex
+        Just n -> uncurry loop (thisScrollHandler (n - selected))
 
 main :: IO ()
 main = do
